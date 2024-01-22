@@ -9,8 +9,8 @@ class Linear:
         Checkout np.zeros function.
         Read the writeup to identify the right shapes for all.
         """
-        self.W = np.zeros((in_features, out_features))  
-        self.b = np.zeros((out_features, 1))
+        self.W = np.zeros((out_features, in_features))  
+        self.b = np.zeros((in_features, 1))
 
         self.debug = debug
 
