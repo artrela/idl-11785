@@ -583,7 +583,7 @@ if DEBUG_AND_GRADE_MLP0:
         mlp0 = MLP0(debug=True)
 
         if not mlp0.layers[0].W.shape == W0.shape:
-            print ("Incorrect architecture")
+            print ("Incorrect architecture: ", mlp0.layers[0].W.shape, W0.shape)
             TEST_mlp0_Z0 = False
             TEST_mlp0_A1 = False
             break
