@@ -68,11 +68,22 @@ class Conv1d_stride1():
             dLdA (np.array): (batch_size, in_channels, input_size)
         """
 
-        self.dLdW = None  # TODO
-        self.dLdb = None  # TODO
-        dLdA = None  # TODO
-
-        return NotImplemented
+        self.dLdb = np.sum(dLdZ, axis=(0, 2))  
+        self.dLdW = np.zeros((self.W.shape)) 
+        dLdA = np.zeros(((self.A.shape))) 
+        
+        padded_dLdZ = np.pad(dLdZ, pad_width=((0,0),(0,0), (self.kernel_size - 1, self.kernel_size - 1)))
+        
+        for i in range(self.A.shape[2]):
+            # grab (2,5,4) of dldz convolve with (5,10,4) of W -> (2,10, 1)
+            # flip horz (along columns)
+            dLdA[:, :, i] = np.tensordot(padded_dLdZ[:, :, i:i+self.kernel_size],  np.flip(self.W, axis=2), ([1, 2], [0, 2]))
+            
+        for i in range(self.kernel_size):
+            # convolve A with dLdZ
+            self.dLdW[:, :, i] = np.tensordot(dLdZ,  self.A[:, :, i:i+dLdZ.shape[2]], ([0, 2], [0, 2]))
+            
+        return dLdA
 
 
 class Conv1d():
