@@ -34,11 +34,31 @@ class Conv1d_stride1():
         Return:
             Z (np.array): (batch_size, out_channels, output_size)
         """
+    
         self.A = A
 
-        Z = None  # TODO
-
-        return NotImplemented
+        batch_size = A.shape[0]
+        input_size = A.shape[2]
+        output_size = input_size - self.kernel_size + 1
+                
+        Z = np.zeros((batch_size, self.out_channels, output_size))
+        
+        for i in range(output_size):
+            Z[:, :, i] = np.tensordot(A[:, :, i:i+self.kernel_size], self.W, ([1, 2], [1, 2]))     
+            
+        """
+        Alternatively:
+        
+        A_reshape = np.zeros((batch_size, inC, kernel, outsize))
+        for i in range(outsize):
+            A_reshape[:, :, :, i ] = A[:, : , i:i+kernel]
+            
+        Z = tensordot(A_reshape, W)
+        Z = transpose(Z, (0,2,1))
+        """       
+ 
+        
+        return Z + self.b[:, np.newaxis]
 
     def backward(self, dLdZ):
         """
