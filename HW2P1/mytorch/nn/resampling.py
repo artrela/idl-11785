@@ -22,8 +22,7 @@ class Upsample1d():
         Z = np.zeros((A.shape[0], A.shape[1], Wout))  
         
         # fill every K-1 idx of Z with A
-        self.fill_idx = np.array([i + i*(self.upsampling_factor-1) for i in range(Win)])
-        Z[:, :, self.fill_idx] = A
+        Z[:, :, ::self.upsampling_factor] = A
         
         return Z
 
@@ -35,7 +34,7 @@ class Upsample1d():
             dLdA (np.array): (batch_size, in_channels, input_width)
         """
         # Take out the K-1th element for dLdA
-        dLdA = dLdZ[:, :, self.fill_idx]  # TODO
+        dLdA = dLdZ[:, :, ::self.upsampling_factor]  
 
         return dLdA
 
@@ -55,8 +54,7 @@ class Downsample1d():
 
         # we want every kth element of A
         self.Win = A.shape[-1]
-        self.fill_idx = np.array([i for i in range(0, self.Win, self.downsampling_factor)])
-        Z =  A[:, :, self.fill_idx]
+        Z =  A[:, :, ::self.downsampling_factor]
         
         return Z
 
@@ -70,7 +68,7 @@ class Downsample1d():
 
         # now we need to fill every kth element of dLdA
         dLdA = np.zeros((dLdZ.shape[0], dLdZ.shape[1], self.Win))
-        dLdA[:, :, self.fill_idx] = dLdZ
+        dLdA[:, :, ::self.downsampling_factor] = dLdZ
         
         return dLdA
 
@@ -88,9 +86,17 @@ class Upsample2d():
             Z (np.array): (batch_size, in_channels, output_height, output_width)
         """
 
-        Z = None  # TODO
+        self.Win = A.shape
+        
+        Wout_H = self.upsampling_factor * (self.Win[-2]-1) + 1
+        Wout_W = self.upsampling_factor * (self.Win[-1]-1) + 1
+        
+        Z = np.zeros((A.shape[0], A.shape[1], Wout_H, Wout_W))  
+        
+        # fill every K-1 idx of Z with A        
+        Z[:, :, ::self.upsampling_factor, ::self.upsampling_factor] = A
 
-        return NotImplemented
+        return Z
 
     def backward(self, dLdZ):
         """
@@ -99,10 +105,12 @@ class Upsample2d():
         Return:
             dLdA (np.array): (batch_size, in_channels, input_height, input_width)
         """
+        
+        dLdA = np.zeros((self.Win))
 
-        dLdA = None  # TODO
-
-        return NotImplemented
+        dLdA = dLdZ[:, :, ::self.upsampling_factor, ::self.upsampling_factor]
+        
+        return dLdA
 
 
 class Downsample2d():
@@ -118,9 +126,11 @@ class Downsample2d():
             Z (np.array): (batch_size, in_channels, output_height, output_width)
         """
 
-        Z = None  # TODO
-
-        return NotImplemented
+        # we want every kth element of A
+        self.Win = A.shape[-1]
+        Z =  A[:, :, ::self.downsampling_factor, ::self.downsampling_factor]
+        
+        return Z
 
     def backward(self, dLdZ):
         """
@@ -130,6 +140,7 @@ class Downsample2d():
             dLdA (np.array): (batch_size, in_channels, input_height, input_width)
         """
 
-        dLdA = None  # TODO
+        dLdA = dLdA = np.zeros((dLdZ.shape[0], dLdZ.shape[1], self.Win, self.Win))
+        dLdA[:, :, ::self.downsampling_factor, ::self.downsampling_factor] = dLdZ
 
-        return NotImplemented
+        return dLdA
