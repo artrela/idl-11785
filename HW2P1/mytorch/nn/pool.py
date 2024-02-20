@@ -16,19 +16,22 @@ class MaxPool2d_stride1():
         """
         
         Z = np.zeros((A.shape[0], A.shape[1], A.shape[2] - self.kernel + 1, A.shape[3] - self.kernel + 1))
-        self.cache = np.empty(Z.shape, dtype=list)
+        
+        self.cache = np.empty((*Z.shape, 2), dtype=list)
+        
         self.A_shape = A.shape
-                
-        for z in range(Z.size):
             
-            b, c, i, j = np.unravel_index(z, Z.shape)
+        for i in range(Z.shape[2]):
+            for j in range(Z.shape[3]): 
+                    
+                A_slice = A[:, :, i:i+self.kernel, j:j+self.kernel]
+                A_slice_array = A_slice.reshape((*A.shape[:2], -1))
                 
-            A_slice = A[b, c, i:i+self.kernel, j:j+self.kernel]
-            
-            max_i, max_j = np.unravel_index(np.argmax(A_slice), A_slice.shape)
-
-            Z[b, c, i, j] = A_slice[max_i, max_j]
-            self.cache[b, c, i, j] = [max_i + i, max_j + j]
+                idx = np.unravel_index(np.argmax(A_slice_array, axis=2), A_slice.shape)
+                
+                Z[:, :, i, j] = np.max(A_slice, axis=(2,3))
+                
+                self.cache[:, :, i, j, :] = np.array(idx[-2:]).transpose((1, 2, 0)) + np.array([[i, j]])
         
         return Z
 
@@ -42,12 +45,13 @@ class MaxPool2d_stride1():
         
         dLdA = np.zeros(self.A_shape)
         
-        for idx in range(self.cache.size):
+        for b in range(self.cache.shape[0]):
+            for c in range(self.cache.shape[1]):
+                for i in range(self.cache.shape[2]):
+                    for j in range(self.cache.shape[3]):
             
-            b, c, i, j = np.unravel_index(idx, self.cache.shape)
-            max_idxs = self.cache[b, c, i, j]
-            
-            dLdA[b, c, max_idxs[0], max_idxs[1]] += dLdZ[b, c, i, j]
+                        max_idxs = self.cache[b, c, i, j, :]
+                        dLdA[b, c, max_idxs[0], max_idxs[1]] += dLdZ[b, c, i, j]
             
         
         return dLdA
@@ -68,13 +72,12 @@ class MeanPool2d_stride1():
         Z = np.zeros((A.shape[0], A.shape[1], A.shape[2] - self.kernel + 1, A.shape[3] - self.kernel + 1))
         self.A_shape = A.shape
                 
-        for z in range(Z.size):
-            
-            b, c, i, j = np.unravel_index(z, Z.shape)
+        for i in range(Z.shape[2]):
+            for j in range(Z.shape[3]):
+                                
+                A_slice = A[:, :, i:i+self.kernel, j:j+self.kernel]
                 
-            A_slice = A[b, c, i:i+self.kernel, j:j+self.kernel]
-            
-            Z[b, c, i, j] = np.mean(A_slice)
+                Z[:, :, i, j] = np.mean(A_slice, (2,3))
             
         return Z
 

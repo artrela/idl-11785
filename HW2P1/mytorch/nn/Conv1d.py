@@ -131,6 +131,6 @@ class Conv1d():
         dLdA = self.conv1d_stride1.backward(ds_back)
 
         # Unpad the gradient
-        dLdA = dLdA[:, :, self.pad:-self.pad]
+        dLdA = dLdA[:, :, self.pad:dLdA.shape[-1]-self.pad]
         
         return dLdA
