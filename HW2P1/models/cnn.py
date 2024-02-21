@@ -62,10 +62,18 @@ class CNN(object):
         # self.flatten              (Flatten)     = Flatten()
         # self.linear_layer         (Linear)      = Linear(???)
         # <---------------------
-
-        self.convolutional_layers = None
-        self.flatten = None
-        self.linear_layer = None
+        
+        Cins = [num_input_channels] + num_channels[:-1] 
+        params = zip(Cins, num_channels, kernel_sizes, strides)
+        
+        # for layer in params:
+        #     print(layer)
+        
+        self.convolutional_layers = [Conv1d(Cin, Cout, k, s) for Cin, Cout, k, s in params ]
+        
+        self.flatten = Flatten()
+        self.linear_layer = Linear(420, num_linear_neurons)
+        self.layers = [ layer for conv, act in zip(self.convolutional_layers, activations) for layer in (conv, act)] 
 
     def forward(self, A):
         """
@@ -78,7 +86,13 @@ class CNN(object):
         # Your code goes here -->
         # Iterate through each layer
         # <---------------------
-
+        for i in range(len(self.convolutional_layers)):
+            A = self.convolutional_layers[i].forward(A)
+            A = self.activations[i].forward(A)
+        
+        A = self.flatten.forward(A)
+        A = self.linear_layer.forward(A)
+        
         # Save output (necessary for error and loss)
         self.Z = A
 
@@ -99,6 +113,13 @@ class CNN(object):
         # Your code goes here -->
         # Iterate through each layer in reverse order
         # <---------------------
+        
+        grad = self.linear_layer.backward(grad)
+        grad = self.flatten.backward(grad)
+        
+        for i in reversed(range(len(self.convolutional_layers))):
+            grad = self.activations[i].backward(grad)
+            grad = self.convolutional_layers[i].backward(grad)
 
         return grad
 
