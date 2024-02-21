@@ -48,7 +48,7 @@ class Tanh:
     
     def forward(self, Z):
 
-        self.A = (np.exp(Z) - np.exp(-Z)) / (np.exp(Z) + np.exp(-Z))
+        self.A = np.tanh(Z) #(np.exp(Z) - np.exp(-Z)) / (np.exp(Z) + np.exp(-Z))
 
         return self.A
 

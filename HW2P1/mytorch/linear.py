@@ -10,7 +10,7 @@ class Linear:
         Read the writeup to identify the right shapes for all.
         """
         self.W = np.zeros((out_features, in_features))  
-        self.b = np.zeros((in_features, 1))
+        self.b = np.zeros((out_features, 1))
 
         self.debug = debug
 
@@ -24,8 +24,8 @@ class Linear:
         self.N = A.shape[0]  # store the batch size of input
         # Think how will self.Ones helps in the calculations and uncomment below
         # self.Ones = np.ones((self.N,1))
-        # Z = A @ self.W.T + np.ones((self.N,1)) @ self.b.T  
-        Z = A @ self.W.T + self.b.T  
+        Z = A @ self.W.T + np.ones((self.N,1)) @ self.b.T  
+        # Z = A @ self.W.T + self.b.T  
 
         return Z
 

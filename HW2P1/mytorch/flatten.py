@@ -12,7 +12,8 @@ class Flatten():
 
         self.A_shape = A.shape
 
-        Z = A.reshape((A.shape[0], -1))
+        Z = A.reshape((self.A_shape[0],-1))
+
         
         return Z
 

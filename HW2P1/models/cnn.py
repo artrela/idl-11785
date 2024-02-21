@@ -72,7 +72,12 @@ class CNN(object):
         self.convolutional_layers = [Conv1d(Cin, Cout, k, s) for Cin, Cout, k, s in params ]
         
         self.flatten = Flatten()
-        self.linear_layer = Linear(420, num_linear_neurons)
+
+        flat_width = (input_width-kernel_sizes[0])/strides[0]+1        
+        for i in range(self.nlayers - 1):
+            flat_width = (flat_width-kernel_sizes[i+1])/strides[i+1]+1
+        
+        self.linear_layer = Linear(int(flat_width*num_channels[-1]), num_linear_neurons)
         self.layers = [ layer for conv, act in zip(self.convolutional_layers, activations) for layer in (conv, act)] 
 
     def forward(self, A):
