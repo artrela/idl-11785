@@ -91,6 +91,11 @@ class GRUCell(object):
         # Define your variables based on the writeup using the corresponding
         # names below.
         
+        self.r = self.r_act.forward( self.Wrx @ x + self.brx + self.Wrh @ h_prev_t + self.brh )
+        self.z = self.z_act.forward( self.Wzx @ x + self.bzx + self.Wzh @ h_prev_t + self.bzh )
+        self.n = self.h_act.forward( self.Wnx @ x + self.bnx + self.r*(self.Wnh @ h_prev_t + self.bnh) )
+        h_t = (1 - self.z)*self.n + self.z*h_prev_t
+        
         assert self.x.shape == (self.d,)
         assert self.hidden.shape == (self.h,)
 
@@ -99,8 +104,8 @@ class GRUCell(object):
         assert self.n.shape == (self.h,)
         assert h_t.shape == (self.h,) # h_t is the final output of you GRU cell.
 
-        # return h_t
-        raise NotImplementedError
+        return h_t
+        # raise NotImplementedError
 
     def backward(self, delta):
         """GRU cell backward.
@@ -130,9 +135,54 @@ class GRUCell(object):
         # 2) When in doubt about shapes, please refer to the table in the writeup.
         # 3) Know that the autograder grades the gradients in a certain order, and the local autograder will tell you which gradient you are currently failing.
         
+        # hidden = h_t-1
+        
+        # Forward Eq.1.
+        dz_t = delta * ( -self.n + self.hidden )
+        assert dz_t.shape == self.z.shape
+        
+        dn_t = delta * (1 - self.z)
+        assert dn_t.shape == self.n.shape
+        
+        # Forward Eq.2.
+        self.dWnx = self.h_act.backward(dn_t)[:, np.newaxis] @ self.x[np.newaxis, :]
+        self.dbnx = self.h_act.backward(dn_t) 
+        
+        dr_t = self.h_act.backward(dn_t) * (self.Wnh @ self.hidden + self.bnh)
+        assert dr_t.shape == self.r.shape
+        
+        self.dWnh = self.h_act.backward(dn_t)[:, np.newaxis] * self.r[:, np.newaxis] @ self.hidden[np.newaxis, :]
+        self.dbnh = self.h_act.backward(dn_t) * self.r
+        
+        # Forward Eq.3.
+        self.dWzx = self.z_act.backward(dz_t)[:, np.newaxis] @ self.x[np.newaxis, :]
+        self.dbzx = self.z_act.backward(dz_t)
+        
+        self.dWzh = self.z_act.backward(dz_t)[:, np.newaxis] @ self.hidden[np.newaxis, :]
+        self.dbzh = self.z_act.backward(dz_t)
+        
+        # Forward Eq.4.
+        self.dWrx = self.r_act.backward(dr_t)[:, np.newaxis] @ self.x[np.newaxis, :]
+        self.dbrx = self.r_act.backward(dr_t)
+        
+        self.dWrh = self.r_act.backward(dr_t)[:, np.newaxis] @ self.hidden[np.newaxis, :]
+        self.dbrh = self.r_act.backward(dr_t)
+        
+        # multiple terms
+        dnt_dx = self.Wnx.T @ self.h_act.backward(dn_t)
+        dzt_dx = self.Wzx.T @ self.z_act.backward(dz_t)
+        drt_dx = self.Wrx.T @ self.r_act.backward(dr_t)
+        
+        dx = dnt_dx + dzt_dx + drt_dx
+        
+        dht_dhprev = delta*self.z
+        dnt_dhprev = self.h_act.backward(dn_t) * self.r @ self.Wnh
+        dzt_dhprev = self.z_act.backward(dz_t) @ self.Wzh
+        drt_dhprev = self.r_act.backward(dr_t) @ self.Wrh 
+        
+        dh_prev_t = dht_dhprev + dnt_dhprev + dzt_dhprev + drt_dhprev
         
         assert dx.shape == (self.d,)
         assert dh_prev_t.shape == (self.h,)
 
-        # return dx, dh_prev_t
-        raise NotImplementedError
+        return dx, dh_prev_t

@@ -1,6 +1,8 @@
 import numpy as np
 import sys
 
+import pdb
+
 sys.path.append("mytorch")
 from rnn_cell import *
 from nn.linear import *
@@ -15,12 +17,12 @@ class RNNPhonemeClassifier(object):
         self.num_layers = num_layers
 
         # TODO: Understand then uncomment this code :)
-        # self.rnn = [
-        #     RNNCell(input_size, hidden_size) if i == 0 
-        #         else RNNCell(hidden_size, hidden_size)
-        #             for i in range(num_layers)
-        # ]
-        # self.output_layer = Linear(hidden_size, output_size)
+        self.rnn = [
+            RNNCell(input_size, hidden_size) if i == 0 
+                else RNNCell(hidden_size, hidden_size)
+                    for i in range(num_layers)
+        ]
+        self.output_layer = Linear(hidden_size, output_size)
 
         # store hidden states at each time step, [(seq_len+1) * (num_layers, batch_size, hidden_size)]
         self.hiddens = []
@@ -89,12 +91,23 @@ class RNNPhonemeClassifier(object):
         #   Similar to above, append a copy of the current hidden array to the hiddens list
         
         # TODO
+        
+        
+        # go through each sequence token one by one, propogating through all layers.
+        h_ = None
+        for time in range(seq_len):
+            h_ = x[:, time, :]
+            for layer, cell in enumerate(self.rnn):
+                hidden[layer] = cell(h_, hidden[layer])
+                h_ = h_ = hidden[layer]
+            self.hiddens.append(hidden.copy())
 
         # Get the outputs from the last time step using the linear layer and return it
         # <--------------------------
+        logits = self.output_layer(h_)
         
         # return logits 
-        raise NotImplementedError
+        return logits
 
     def backward(self, delta):
         """RNN Back Propagation Through Time (BPTT).
@@ -142,7 +155,23 @@ class RNNPhonemeClassifier(object):
         Tip: You may or may not require += at places. Think about it and code
 
         """
-        # TODO
-
-        # return dh / batch_size
-        raise NotImplementedError
+        
+        for time in range(seq_len-1, -1, -1):
+            
+            for layer in range(self.num_layers-1, -1, -1):
+                
+                # pdb.set_trace()
+                h_prev_l = self.hiddens[time+1][layer-1] if layer != 0 else self.x[:, time, :]
+                h_t = self.hiddens[time+1][layer]
+                h_prev_t = self.hiddens[time][layer]
+                
+                dx, dh_prev_t = self.rnn[layer].backward(dh[layer], h_t, h_prev_l, h_prev_t)
+                
+                dh[layer] = dh_prev_t
+                
+                if layer != 0:
+                    dh[layer-1] += dx
+                    
+                
+        return dh / batch_size
+        # raise NotImplementedError

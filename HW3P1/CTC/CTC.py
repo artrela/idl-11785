@@ -22,21 +22,21 @@ class CTC(object):
 	def extend_target_with_blank(self, target):
 		"""Extend target sequence with blank.
 
-        Input
-        -----
-        target: (np.array, dim = (target_len,))
-                target output containing indexes of target phonemes
-        ex: [1,4,4,7]
+		Input
+		-----
+		target: (np.array, dim = (target_len,))
+				target output containing indexes of target phonemes
+		ex: [1,4,4,7]
 
-        Return
-        ------
-        extSymbols: (np.array, dim = (2 * target_len + 1,))
-                    extended target sequence with blanks
-        ex: [0,1,0,4,0,4,0,7,0]
+		Return
+		------
+		extSymbols: (np.array, dim = (2 * target_len + 1,))
+					extended target sequence with blanks
+		ex: [0,1,0,4,0,4,0,7,0]
 
-        skipConnect: (np.array, dim = (2 * target_len + 1,))
-                    skip connections
-        ex: [0,0,0,1,0,0,0,1,0]
+		skipConnect: (np.array, dim = (2 * target_len + 1,))
+					skip connections
+		ex: [0,0,0,1,0,0,0,1,0]
 		"""
 
 		extended_symbols = [self.BLANK]
@@ -47,39 +47,42 @@ class CTC(object):
 		N = len(extended_symbols)
 
 		# -------------------------------------------->
-		# TODO
+		skip_connect = [self.BLANK for _ in extended_symbols]
+		for i in range(1, len(target)):
+			if target[i] != target[i-1]:
+				skip_connect[i*2 + 1] = 1
+		
 		# <---------------------------------------------
 
 		extended_symbols = np.array(extended_symbols).reshape((N,))
 		skip_connect = np.array(skip_connect).reshape((N,))
 
-		# return extended_symbols, skip_connect
-		raise NotImplementedError
+		return extended_symbols, skip_connect
 
 
 	def get_forward_probs(self, logits, extended_symbols, skip_connect):
 		"""Compute forward probabilities.
 
-        Input
-        -----
-        logits: (np.array, dim = (input_len, len(Symbols)))
-                predict (log) probabilities
+		Input
+		-----
+		logits: (np.array, dim = (input_len, len(Symbols)))
+				predict (log) probabilities
 
-                To get a certain symbol i's logit as a certain time stamp t:
-                p(t,s(i)) = logits[t, qextSymbols[i]]
+				To get a certain symbol i's logit as a certain time stamp t:
+				p(t,s(i)) = logits[t, qextSymbols[i]]
 
-        extSymbols: (np.array, dim = (2 * target_len + 1,))
-                    extended label sequence with blanks
+		extSymbols: (np.array, dim = (2 * target_len + 1,))
+					extended label sequence with blanks
 
-        skipConnect: (np.array, dim = (2 * target_len + 1,))
-                    skip connections
+		skipConnect: (np.array, dim = (2 * target_len + 1,))
+					skip connections
 
-        Return
-        ------
-        alpha: (np.array, dim = (input_len, 2 * target_len + 1))
-                forward probabilities
+		Return
+		------
+		alpha: (np.array, dim = (input_len, 2 * target_len + 1))
+				forward probabilities
 
-        """
+		"""
 
 		S, T = len(extended_symbols), len(logits)
 		alpha = np.zeros(shape=(T, S))
@@ -88,7 +91,7 @@ class CTC(object):
 		# TODO: Intialize alpha[0][0]
 		# TODO: Intialize alpha[0][1]
 		# TODO: Compute all values for alpha[t][sym] where 1 <= t < T and 1 <= sym < S (assuming zero-indexing)
-        # IMP: Remember to check for skipConnect when calculating alpha
+		# IMP: Remember to check for skipConnect when calculating alpha
 		# <---------------------------------------------
 
 		# return alpha
@@ -98,24 +101,24 @@ class CTC(object):
 	def get_backward_probs(self, logits, extended_symbols, skip_connect):
 		"""Compute backward probabilities.
 
-        Input
-        -----
-        logits: (np.array, dim = (input_len, len(symbols)))
-                predict (log) probabilities
+		Input
+		-----
+		logits: (np.array, dim = (input_len, len(symbols)))
+				predict (log) probabilities
 
-                To get a certain symbol i's logit as a certain time stamp t:
-                p(t,s(i)) = logits[t,extSymbols[i]]
+				To get a certain symbol i's logit as a certain time stamp t:
+				p(t,s(i)) = logits[t,extSymbols[i]]
 
-        extSymbols: (np.array, dim = (2 * target_len + 1,))
-                    extended label sequence with blanks
+		extSymbols: (np.array, dim = (2 * target_len + 1,))
+					extended label sequence with blanks
 
-        skipConnect: (np.array, dim = (2 * target_len + 1,))
-                    skip connections
+		skipConnect: (np.array, dim = (2 * target_len + 1,))
+					skip connections
 
-        Return
-        ------
-        beta: (np.array, dim = (input_len, 2 * target_len + 1))
-                backward probabilities
+		Return
+		------
+		beta: (np.array, dim = (input_len, 2 * target_len + 1))
+				backward probabilities
 		
 		"""
 
@@ -133,18 +136,18 @@ class CTC(object):
 	def get_posterior_probs(self, alpha, beta):
 		"""Compute posterior probabilities.
 
-        Input
-        -----
-        alpha: (np.array, dim = (input_len, 2 * target_len + 1))
-                forward probability
+		Input
+		-----
+		alpha: (np.array, dim = (input_len, 2 * target_len + 1))
+				forward probability
 
-        beta: (np.array, dim = (input_len, 2 * target_len + 1))
-                backward probability
+		beta: (np.array, dim = (input_len, 2 * target_len + 1))
+				backward probability
 
-        Return
-        ------
-        gamma: (np.array, dim = (input_len, 2 * target_len + 1))
-                posterior probability
+		Return
+		------
+		gamma: (np.array, dim = (input_len, 2 * target_len + 1))
+				posterior probability
 
 		"""
 
@@ -162,144 +165,144 @@ class CTC(object):
 
 class CTCLoss(object):
 
-    def __init__(self, BLANK=0):
-        """
+	def __init__(self, BLANK=0):
+		"""
 
 		Initialize instance variables
 
-        Argument(s)
+		Argument(s)
 		-----------
 		BLANK (int, optional): blank label index. Default 0.
-        
+		
 		"""
 		# -------------------------------------------->
-        # No need to modify
-        super(CTCLoss, self).__init__()
+		# No need to modify
+		super(CTCLoss, self).__init__()
 
-        self.BLANK = BLANK
-        self.gammas = []
-        self.ctc = CTC()
+		self.BLANK = BLANK
+		self.gammas = []
+		self.ctc = CTC()
 		# <---------------------------------------------
 
-    def __call__(self, logits, target, input_lengths, target_lengths):
+	def __call__(self, logits, target, input_lengths, target_lengths):
 
-        # No need to modify
-        return self.forward(logits, target, input_lengths, target_lengths)
+		# No need to modify
+		return self.forward(logits, target, input_lengths, target_lengths)
 
-    def forward(self, logits, target, input_lengths, target_lengths):
-        """CTC loss forward
+	def forward(self, logits, target, input_lengths, target_lengths):
+		"""CTC loss forward
 
 		Computes the CTC Loss by calculating forward, backward, and
 		posterior proabilites, and then calculating the avg. loss between
 		targets and predicted log probabilities
 
-        Input
-        -----
-        logits [np.array, dim=(seq_length, batch_size, len(symbols)]:
+		Input
+		-----
+		logits [np.array, dim=(seq_length, batch_size, len(symbols)]:
 			log probabilities (output sequence) from the RNN/GRU
 
-        target [np.array, dim=(batch_size, padded_target_len)]:
-            target sequences
+		target [np.array, dim=(batch_size, padded_target_len)]:
+			target sequences
 
-        input_lengths [np.array, dim=(batch_size,)]:
-            lengths of the inputs
+		input_lengths [np.array, dim=(batch_size,)]:
+			lengths of the inputs
 
-        target_lengths [np.array, dim=(batch_size,)]:
-            lengths of the target
+		target_lengths [np.array, dim=(batch_size,)]:
+			lengths of the target
 
-        Returns
-        -------
-        loss [float]:
-            avg. divergence between the posterior probability and the target
+		Returns
+		-------
+		loss [float]:
+			avg. divergence between the posterior probability and the target
 
-        """
+		"""
 
-        # No need to modify
-        self.logits = logits
-        self.target = target
-        self.input_lengths = input_lengths
-        self.target_lengths = target_lengths
+		# No need to modify
+		self.logits = logits
+		self.target = target
+		self.input_lengths = input_lengths
+		self.target_lengths = target_lengths
 
-        #####  IMP:
-        #####  Output losses should be the mean loss over the batch
+		#####  IMP:
+		#####  Output losses should be the mean loss over the batch
 
-        # No need to modify
-        B, _ = target.shape
-        total_loss = np.zeros(B)
-        self.extended_symbols = []
+		# No need to modify
+		B, _ = target.shape
+		total_loss = np.zeros(B)
+		self.extended_symbols = []
 
-        for batch_itr in range(B):
-            # -------------------------------------------->
-            # Computing CTC Loss for single batch
-            # Process:
-            #     Truncate the target to target length
-            #     Truncate the logits to input length
-            #     Extend target sequence with blank
-            #     Compute forward probabilities
-            #     Compute backward probabilities
-            #     Compute posteriors using total probability function
-            #     Compute expected divergence for each batch and store it in totalLoss
-            #     Take an average over all batches and return final result
-            # <---------------------------------------------
+		for batch_itr in range(B):
+			# -------------------------------------------->
+			# Computing CTC Loss for single batch
+			# Process:
+			#	 Truncate the target to target length
+			#	 Truncate the logits to input length
+			#	 Extend target sequence with blank
+			#	 Compute forward probabilities
+			#	 Compute backward probabilities
+			#	 Compute posteriors using total probability function
+			#	 Compute expected divergence for each batch and store it in totalLoss
+			#	 Take an average over all batches and return final result
+			# <---------------------------------------------
 
-            # -------------------------------------------->
-            # TODO
-            # <---------------------------------------------
-            pass
+			# -------------------------------------------->
+			# TODO
+			# <---------------------------------------------
+			pass
 
-        total_loss = np.sum(total_loss) / B
+		total_loss = np.sum(total_loss) / B
 		
-        # return total_loss
-        raise NotImplementedError
+		# return total_loss
+		raise NotImplementedError
 		
 
-    def backward(self):
-        """
+	def backward(self):
+		"""
 		
 		CTC loss backard
 
-        Calculate the gradients w.r.t the parameters and return the derivative 
+		Calculate the gradients w.r.t the parameters and return the derivative 
 		w.r.t the inputs, xt and ht, to the cell.
 
-        Input
-        -----
-        logits [np.array, dim=(seqlength, batch_size, len(Symbols)]:
+		Input
+		-----
+		logits [np.array, dim=(seqlength, batch_size, len(Symbols)]:
 			log probabilities (output sequence) from the RNN/GRU
 
-        target [np.array, dim=(batch_size, padded_target_len)]:
-            target sequences
+		target [np.array, dim=(batch_size, padded_target_len)]:
+			target sequences
 
-        input_lengths [np.array, dim=(batch_size,)]:
-            lengths of the inputs
+		input_lengths [np.array, dim=(batch_size,)]:
+			lengths of the inputs
 
-        target_lengths [np.array, dim=(batch_size,)]:
-            lengths of the target
+		target_lengths [np.array, dim=(batch_size,)]:
+			lengths of the target
 
-        Returns
-        -------
-        dY [np.array, dim=(seq_length, batch_size, len(extended_symbols))]:
-            derivative of divergence w.r.t the input symbols at each time
+		Returns
+		-------
+		dY [np.array, dim=(seq_length, batch_size, len(extended_symbols))]:
+			derivative of divergence w.r.t the input symbols at each time
 
-        """
+		"""
 
-        # No need to modify
-        T, B, C = self.logits.shape
-        dY = np.full_like(self.logits, 0)
+		# No need to modify
+		T, B, C = self.logits.shape
+		dY = np.full_like(self.logits, 0)
 
-        for batch_itr in range(B):
-            # -------------------------------------------->
-            # Computing CTC Derivative for single batch
-            # Process:
-            #     Truncate the target to target length
-            #     Truncate the logits to input length
-            #     Extend target sequence with blank
-            #     Compute derivative of divergence and store them in dY
-            # <---------------------------------------------
+		for batch_itr in range(B):
+			# -------------------------------------------->
+			# Computing CTC Derivative for single batch
+			# Process:
+			#	 Truncate the target to target length
+			#	 Truncate the logits to input length
+			#	 Extend target sequence with blank
+			#	 Compute derivative of divergence and store them in dY
+			# <---------------------------------------------
 
-            # -------------------------------------------->
-            # TODO
-            # <---------------------------------------------
-            pass
+			# -------------------------------------------->
+			# TODO
+			# <---------------------------------------------
+			pass
 
-        # return dY
-        raise NotImplementedError
+		# return dY
+		raise NotImplementedError
