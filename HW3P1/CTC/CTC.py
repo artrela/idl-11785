@@ -91,11 +91,26 @@ class CTC(object):
 		# TODO: Intialize alpha[0][0]
 		# TODO: Intialize alpha[0][1]
 		# TODO: Compute all values for alpha[t][sym] where 1 <= t < T and 1 <= sym < S (assuming zero-indexing)
-		# IMP: Remember to check for skipConnect when calculating alpha
+		# IMP: Remember to check for skipConnect when calculating alpha #!!!!!!!!!! go back and check this
 		# <---------------------------------------------
 
-		# return alpha
-		raise NotImplementedError
+		alpha[0, 0] = logits[0, extended_symbols[0]]
+		alpha[0, 1] = logits[0, extended_symbols[1]]
+
+		for t in range(1, T):
+			alpha[t, 0] = alpha[t-1, 0]*logits[t, extended_symbols[0]]
+   
+			for s in range(1, S):
+				alpha[t, s] = alpha[t-1, s] + alpha[t-1, s-1]
+	
+				# if s > 1 and skip_connect[s] and extended_symbols[s] != extended_symbols[s-2]:
+				if skip_connect[s]:
+					alpha[t, s] += alpha[t-1, s-2]
+	 
+				alpha[t, s] *= logits[t, extended_symbols[s]]
+ 
+		return alpha
+		# raise NotImplementedError
 
 
 	def get_backward_probs(self, logits, extended_symbols, skip_connect):
@@ -126,11 +141,33 @@ class CTC(object):
 		beta = np.zeros(shape=(T, S))
 
 		# -------------------------------------------->
-		# TODO
+		S -= 1
+		T -= 1
+  
+		beta[T, S] = logits[T, extended_symbols[S]]
+		beta[T, S-1] = logits[T, extended_symbols[S-1]]
+
+		for t in range(T-1, -1, -1):
+			beta[t, S] = beta[t+1, S] * logits[t, extended_symbols[S]]
+   
+			for s in range(S-1, -1, -1):
+				beta[t, s] = beta[t+1, s] + beta[t+1, s+1]
+	
+				if s <= S-2 and skip_connect[s+2]:
+					beta[t, s] += beta[t+1, s+2]
+	 
+				beta[t, s] *= logits[t, extended_symbols[s]]
+	
+		
+		for t in range(T, -1, -1):
+			for s in range(S, -1, -1):
+				beta[t, s] /= logits[t, extended_symbols[s]]
+  
+  
 		# <--------------------------------------------
 
-		# return beta
-		raise NotImplementedError
+		return beta
+		# raise NotImplementedError
 		
 
 	def get_posterior_probs(self, alpha, beta):
@@ -156,11 +193,20 @@ class CTC(object):
 		sumgamma = np.zeros((T,))
 
 		# -------------------------------------------->
-		# TODO
+		
+		for t in range(T):
+	  
+			for s in range(S):
+				gamma[t, s] = alpha[t, s] * beta[t, s]
+				sumgamma[t] += gamma[t, s]
+
+			for s in range(S):
+				gamma[t, s] /= sumgamma[t]
+  
 		# <---------------------------------------------
 
-		# return gamma
-		raise NotImplementedError
+		return gamma 
+		# raise NotImplementedError
 
 
 class CTCLoss(object):
@@ -230,30 +276,40 @@ class CTCLoss(object):
 		B, _ = target.shape
 		total_loss = np.zeros(B)
 		self.extended_symbols = []
-
+  
 		for batch_itr in range(B):
 			# -------------------------------------------->
 			# Computing CTC Loss for single batch
 			# Process:
 			#	 Truncate the target to target length
+			target_trunc = target[batch_itr, :target_lengths[batch_itr]]
 			#	 Truncate the logits to input length
+			logits_trunc = logits[:input_lengths[batch_itr], batch_itr, :]
 			#	 Extend target sequence with blank
+			target_trunc, skip = self.ctc.extend_target_with_blank(target_trunc)
 			#	 Compute forward probabilities
+			alpha = self.ctc.get_forward_probs(logits_trunc, target_trunc, skip)
 			#	 Compute backward probabilities
+			beta = self.ctc.get_backward_probs(logits_trunc, target_trunc, skip)
 			#	 Compute posteriors using total probability function
+			gamma = self.ctc.get_posterior_probs(alpha, beta)
 			#	 Compute expected divergence for each batch and store it in totalLoss
 			#	 Take an average over all batches and return final result
+			self.gammas.append(gamma)
+			self.extended_symbols.append(target_trunc)
+			#####  IMP:
+			#####  Output losses should be the mean loss over the batch
+			for t in range(len(target_trunc)):
+				for s in range(len(logits_trunc)):
+					total_loss[batch_itr] -= gamma[s][t] * np.log(logits_trunc[s][target_trunc[t]]) 
+			# <---------------------------------------------
+   
 			# <---------------------------------------------
 
-			# -------------------------------------------->
-			# TODO
-			# <---------------------------------------------
-			pass
-
-		total_loss = np.sum(total_loss) / B
+		total_loss = np.mean(total_loss)
 		
-		# return total_loss
-		raise NotImplementedError
+		return total_loss
+		# raise NotImplementedError
 		
 
 	def backward(self):
@@ -286,8 +342,10 @@ class CTCLoss(object):
 		"""
 
 		# No need to modify
-		T, B, C = self.logits.shape
+		T, B, C = self.logits.shape	
 		dY = np.full_like(self.logits, 0)
+  
+		# we have a dY that finds the divergence 
 
 		for batch_itr in range(B):
 			# -------------------------------------------->
@@ -300,9 +358,18 @@ class CTCLoss(object):
 			# <---------------------------------------------
 
 			# -------------------------------------------->
-			# TODO
-			# <---------------------------------------------
-			pass
 
-		# return dY
-		raise NotImplementedError
+			target_trunc = self.target[batch_itr, :self.target_lengths[batch_itr]]
+			#	 Truncate the logits to input length
+			logits_trunc = self.logits[:self.input_lengths[batch_itr], batch_itr, :]
+			#	 Extend target sequence with blank
+			target_trunc, skip = self.ctc.extend_target_with_blank(target_trunc)
+     
+			for t in range(T):
+				for c in range(C):
+					# t = T, c = C 
+					dY[c, batch_itr, target_trunc[t]] -= self.gammas[batch_itr][c][t] / logits_trunc[c][target_trunc[t]] 
+			# <---------------------------------------------
+
+		return dY
+		# raise NotImplementedError
