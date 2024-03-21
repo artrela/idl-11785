@@ -365,10 +365,10 @@ class CTCLoss(object):
 			#	 Extend target sequence with blank
 			target_trunc, skip = self.ctc.extend_target_with_blank(target_trunc)
      
-			for t in range(T):
-				for c in range(C):
+			for t in range(self.input_lengths[batch_itr]):
+				for c in range(len(target_trunc)):
 					# t = T, c = C 
-					dY[c, batch_itr, target_trunc[t]] -= self.gammas[batch_itr][c][t] / logits_trunc[c][target_trunc[t]] 
+					dY[t, batch_itr, target_trunc[c]] -= self.gammas[batch_itr][t][c] / logits_trunc[t][target_trunc[c]] 
 			# <---------------------------------------------
 
 		return dY
