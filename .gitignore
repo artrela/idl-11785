@@ -2,3 +2,5 @@
 *._*
 *.npz
 **autograder/*
+*project/
+**/autograder/.DS_Store
