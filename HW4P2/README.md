@@ -1,4 +1,4 @@
-# HW34P2: Submission Details
+# HW4P2: Submission Details
 
 ## Running Intructions:
 The Jupyter notebook should be self contained, and the cells can be ran as is. *HW4P2_Alec.ipynb* directly took cells from HW4P2 Starter Notebook.
