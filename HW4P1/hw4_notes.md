@@ -56,3 +56,5 @@ Often the data can be viewed as independent so you can maximize the product sum 
 - Self-attention is unique in that we are focused on trying to figure out which part of the input is most important at this current time. 
 - Dot product between K, Q allows you to figure out how similar they are (think cosine similarity) which tells you what to pay attention to
 - This is then multiplied with the values to scale the attention by which values they correspond to. 
+
+- We take log of probabilities so that instead of multiplying probabilities (which trends to zero), we can add them. This will help with underflow. 
